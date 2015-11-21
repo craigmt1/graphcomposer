@@ -1,5 +1,6 @@
-import networkx as nx 
+#import networkx as nx 
 import itertools as it
+from operator import sub
 
 def getWeight(s):
     #find distribution of cannibals and missionaries
@@ -17,18 +18,32 @@ def getValidPermutations(start):
     #generate list of permutations that pass validity check
     return [''.join(subset) for subset in it.permutations(start,len(start)) if isValid(''.join(subset))]
 
+#checks if s2 is possible next move for s1
+def isNext(s1, s2):
+    mask = tuple(map(sub, s1, s2))
+    validMasks = [(1,0,-1,0), (0,1,0,-1)]
+    if mask in validMasks: return True
+    else: return False
+
+def weightToStr(w):
+    (v1, c1, v2, c2) = w
+    return 'v' * v1 + 'c' * c1 + 'b' + 'v' * v2 + 'c' * c2
+
 def main(num):
     c = 'v' * num + 'c' * num + 'b'
     #get all valid permutations
     combos = getValidPermutations(c)
+
     #generate sets of moves at all stages
-    movepositions = [set() for i in c]
+    movesets = [set() for i in c]
     for combo in combos:
         i = combo.index('b')
-        movepositions[i] |= {combo}
+        movesets[i] |= {getWeight(combo)}
 
-    #print all movesets (reversed)
+    #reverse movesets
+    movesets = movesets[::-1]
+    #print all movesets
     i = 1
-    for moveset in movepositions[::-1]:
-        print('Move ' + str(i) + ': ' + str(moveset))
+    for moveset in movesets:
+        print('Move ' + str(i) + ': ' + str({weightToStr(w) for w in moveset}))
         i+=1
