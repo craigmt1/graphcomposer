@@ -19,6 +19,8 @@ def writeMID(filename, tempo, notes):
 	MyMIDI.addTrackName(track,time,"Sample Track")
 	MyMIDI.addTempo(track,time,tempo)
 
+	writeNotes(MyMIDI, notes)
+
 	# And write it to disk.
 	binfile = open(filename, 'wb')
 	MyMIDI.writeFile(binfile)
