@@ -8,6 +8,7 @@ import networkx as nx
 import numpy
 import random
 from midiutil.MidiFile import MIDIFile
+import math
 
 
 G=nx.Graph()
@@ -23,46 +24,52 @@ for chord in minor:
 
 for i in range(0, len(major)):
     G.add_edge(major[i], minor[i])
-G.add_edge("F","C")
 
 for i in range(0, len(minor)-1):
     G.add_edge(minor[i], minor[i+1])
 G.add_edge("d","a")
 
+for i in range(0, len(major)-1):
+    G.add_edge(major[i], major[i+1])
+G.add_edge("F","C")
 
-major_chords = [[0 for x in range(7)] for x in range(3)] 
+
+major_chords = [[0 for x in range(12)] for x in range(3)] 
 major_chords[0][0] = "C"
 major_chords[1][0] = "a"
 major_chords[2][0] = "F"
 
-major_chords[0][1] = "G"
-major_chords[1][1] = "d"
+major_chords[0][2] = "G"
+major_chords[1][2] = "d"
+major_chords[2][2] = 0
 
-major_chords[0][2] = "C"
-major_chords[1][2] = "a"
-major_chords[2][2] = "e"
-
-major_chords[0][3] = "F"
-major_chords[1][3] = "d"
-major_chords[2][3] = "G"
-
-major_chords[0][4] = "G"
-major_chords[1][4] = "e"
-major_chords[2][4] = "C"
+major_chords[0][4] = "C"
+major_chords[1][4] = "a"
+major_chords[2][4] = "e"
 
 major_chords[0][5] = "F"
-major_chords[1][5] = "a"
-major_chords[2][5] = "d"
+major_chords[1][5] = "d"
+major_chords[2][5] = "G"
 
-major_chords[0][6] = "G"
-major_chords[1][6] = "e"
+major_chords[0][7] = "G"
+major_chords[1][7] = "e"
+major_chords[2][7] = "C"
 
-melody = ("C", "major", [60,62,64,65,67])
+major_chords[0][9] = "F"
+major_chords[1][9] = "a"
+major_chords[2][9] = "d"
 
-midi_notes = {0:"C",1:"C#",2:"D",3:"D#",4:"E",5:"F",6:"F#",7:"G",8:"G#",9:"A",10:"A#",11:"B"}
+major_chords[0][11] = "G"
+major_chords[1][11] = "e"
+major_chords[2][11] = 0
 
 
-def create_winsound(melody):
+melody = ("C", "major", [60,64,65,69,71,72])
+
+num_to_note = {0:"C",1:"C#",2:"D",3:"D#",4:"E",5:"F",6:"F#",7:"G",8:"G#",9:"A",10:"A#",11:"B"}
+note_to_num = {"C":0,"C#":1,"D":2,"D#":3,"E":4,"F":5,"F#":6,"G":7,"G#":8,"A":9,"A#":10,"B":11}
+
+def create_sound(melody):
     key, maj_min, notes = melody
     MyMIDI = MIDIFile(1)
     track = 0   
@@ -74,6 +81,7 @@ def create_winsound(melody):
 
     # Add a note. addNote expects the following information:
     counter = 0
+    nextChord = "C"
     for note in notes:
         track = 0
         channel = 0
@@ -82,14 +90,60 @@ def create_winsound(melody):
         volume = 100
         time = time + 4
 
-        note_letter = midi_notes[pitch%12]
+        note_letter = num_to_note[pitch%12]
+        chords = []
+        for x in range(0,3):
+            chords.append(major_chords[x][pitch%12])
 
         MyMIDI.addNote(track,channel,pitch,time,duration,volume)
         if counter == 0:
             MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
             MyMIDI.addNote(track,channel,pitch-8,time,duration,volume)
             MyMIDI.addNote(track,channel,pitch-5,time,duration,volume)
-        else:
+        else: 
+            path1 = nx.shortest_path(G, source=nextChord, target=chords[0])
+            path2 = nx.shortest_path(G, source=nextChord, target=chords[1])
+            path3 = [0]*20
+            if major_chords[2][notes[counter]%12] != 0: path3 = nx.shortest_path(G, source=nextChord, target=chords[2])
+            chords_list = [(path1, len(path1)), (path2, len(path2)), (path3, len(path3))]
+            chords_list.sort(key=lambda tup: tup[1])
+            print(chords_list)
+            l, length = chords_list[0]
+            if length != 1:
+                nextChord = l[length - 1]
+            else:
+                l, length = chords_list[1]
+                nextChord = l[length - 1]
+            if nextChord.isupper():
+                if note_letter == nextChord: # root inversion
+                    MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-8,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-5,time,duration,volume)
+                if math.fabs(note_to_num[note_letter] - note_to_num[nextChord]) == 5: # second inversion
+                    MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-3,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-7,time,duration,volume)
+                if math.fabs(note_to_num[note_letter] - note_to_num[nextChord]) == 4: #first inversion
+                    MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-4,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-9,time,duration,volume)
+            else:
+
+                if note_letter == nextChord.upper(): # root inversion
+                    MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-9,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-5,time,duration,volume)
+                if math.fabs(note_to_num[note_letter] - note_to_num[nextChord.upper()]) == 5: # second inversion
+                    MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-4,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-7,time,duration,volume)
+                if math.fabs(note_to_num[note_letter] - note_to_num[nextChord.upper()]) == 3: #first inversion
+                    MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-3,time,duration,volume)
+                    MyMIDI.addNote(track,channel,pitch-8,time,duration,volume)
+
+        print(nextChord)
+
             #stuff
 
         counter = counter + 1
@@ -101,8 +155,7 @@ def create_winsound(melody):
     MyMIDI.writeFile(binfile)
     binfile.close()
 
-create_winsound(melody)
-
+create_sound(melody)
 
 
 
