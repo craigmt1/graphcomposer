@@ -64,31 +64,41 @@ major_chords[1][11] = "e"
 major_chords[2][11] = 0
 
 
-melody = ("C", "major", [60,64,65,69,71,72])
+melody = [60,62,67,71,72,79] #[60,62,65,64,62] [60,64,65,69,71,72] [60,62,67,55,60] [60,62,67,71,72,79]
 
 num_to_note = {0:"C",1:"C#",2:"D",3:"D#",4:"E",5:"F",6:"F#",7:"G",8:"G#",9:"A",10:"A#",11:"B"}
 note_to_num = {"C":0,"C#":1,"D":2,"D#":3,"E":4,"F":5,"F#":6,"G":7,"G#":8,"A":9,"A#":10,"B":11}
 
-def create_sound(melody):
-    key, maj_min, notes = melody
+def create_harmony(melody):
+    notes = melody
     MyMIDI = MIDIFile(1)
     track = 0   
     time = 0
 
     # Add track name and tempo.
-    MyMIDI.addTrackName(track,time,"Sample Track")
+    MyMIDI.addTrackName(track,time,"Sample Track2")
     MyMIDI.addTempo(track,time,120)
 
     # Add a note. addNote expects the following information:
     counter = 0
     nextChord = "C"
-    for note in notes:
+
+    for note in notes: #play the melody alone first
         track = 0
         channel = 0
         pitch = note
-        duration = 1
+        duration = 2
         volume = 100
-        time = time + 4
+        time = time + 3
+        MyMIDI.addNote(track,channel,pitch,time,duration,volume)
+
+    for note in notes: #now add harmonies
+        track = 0
+        channel = 0
+        pitch = note
+        duration = 2
+        volume = 100
+        time = time + 3
 
         note_letter = num_to_note[pitch%12]
         chords = []
@@ -96,13 +106,13 @@ def create_sound(melody):
             chords.append(major_chords[x][pitch%12])
 
         MyMIDI.addNote(track,channel,pitch,time,duration,volume)
-        if counter == 0:
+        if counter == 0: #first chord is always root chord
             MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
             MyMIDI.addNote(track,channel,pitch-8,time,duration,volume)
             MyMIDI.addNote(track,channel,pitch-5,time,duration,volume)
         else: 
-            path1 = nx.shortest_path(G, source=nextChord, target=chords[0])
-            path2 = nx.shortest_path(G, source=nextChord, target=chords[1])
+            path1 = nx.shortest_path(G, source=nextChord, target=chords[0]) #find shortest path to next possible chords and pick the one with shortest distance
+            path2 = nx.shortest_path(G, source=nextChord, target=chords[1]) # could use shortest_path_length instead
             path3 = [0]*20
             if major_chords[2][notes[counter]%12] != 0: path3 = nx.shortest_path(G, source=nextChord, target=chords[2])
             chords_list = [(path1, len(path1)), (path2, len(path2)), (path3, len(path3))]
@@ -144,18 +154,14 @@ def create_sound(melody):
 
         print(nextChord)
 
-            #stuff
-
         counter = counter + 1
 
-
-        
-
-    binfile = open("output2.mid", 'wb')
+    binfile = open("harmony.mid", 'wb')
     MyMIDI.writeFile(binfile)
     binfile.close()
 
-create_sound(melody)
+
+create_harmony(melody)
 
 
 
