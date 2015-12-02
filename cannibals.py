@@ -1,49 +1,108 @@
-#import networkx as nx 
-import itertools as it
-from operator import sub
 
-def getWeight(s):
-    #find distribution of cannibals and missionaries
-    b_ind = s.index('b')
-    s1, s2, = s[:b_ind], s[b_ind:]
-    return (s1.count('v'), s1.count('c'), s2.count('v'), s2.count('c'))
 
-def isValid(s):
-    (v1, c1, v2, c2) = getWeight(s)
-    if v1 and c1 > v1: return False
-    if v2 and c2 > v2: return False
-    return True
+#https://en.wikipedia.org/wiki/Missionaries_and_cannibals_problem
+class vector(object):
+    def __init__(self, missionaries, cannibals, boats):
+        self.missionaries = missionaries
+        self.cannibals = cannibals
+        self.boats = boats
+    def __repr__(self):
+        return str((self.missionaries, self.cannibals, self.boats))
+    def __str__(self):
+        return str((self.missionaries, self.cannibals, self.boats))
+    def __sub__(self, other):
+        return vector(self.missionaries - other.missionaries,\
+                      self.cannibals - other.cannibals,\
+                      self.boats - other.boats)
+    def __add__(self, other):
+        return vector(self.missionaries + other.missionaries,\
+                      self.cannibals + other.cannibals,\
+                      self.boats + other.boats)
+    def __eq__(self, other):
+        return self.missionaries == other.missionaries and self.cannibals == other.cannibals and self.boats == other.boats
+    def move(self, other):
+        if self.boats == 0: return self.__add__(other)
+        else: return self.__sub__(other)
+    def isGoal(self):
+        return self.missionaries == 0 and self.cannibals == 0
+    def isValid(self, total):
+        if self.cannibals < 0 or self.missionaries < 0: return False
+        if self.cannibals > total or self.missionaries > total: return False
+        if self.cannibals > self.missionaries and self.boats == 0: return False
+        if self.cannibals < self.missionaries and self.boats == 1: return False
+        return True
+    def display(self, total):
+        return 'M' * self.missionaries + \
+               'C' * self.cannibals + \
+               '|' + str(self.boats) + '|' + \
+               'M' * (total - self.missionaries) + \
+               'C' * (total - self.cannibals)
 
-def getValidPermutations(start):
-    #generate list of permutations that pass validity check
-    return [''.join(subset) for subset in it.permutations(start,len(start)) if isValid(''.join(subset))]
+class tree(object):
+    def __init__(self, v, children, total, parent=None):
+        self.v = v
+        self.children = children
+        self.winningPaths = []
+        self.parent = parent
+        self.total = total
 
-#checks if s2 is possible next move for s1
-def isNext(s1, s2):
-    mask = tuple(map(sub, s1, s2))
-    validMasks = [(1,0,-1,0), (0,1,0,-1)]
-    if mask in validMasks: return True
-    else: return False
+    def __str__(self, level=0):
+        out = '\t'*level + str(self.v) + '\n'
+        for child in self.children:
+            if type(child) == tree:
+                out += child.__str__(level + 1)
+        return out
 
-def weightToStr(w):
-    (v1, c1, v2, c2) = w
-    return 'v' * v1 + 'c' * c1 + 'b' + 'v' * v2 + 'c' * c2
+    def __repr__(self):
+        return '<tree node representation>'
 
-def main(num):
-    c = 'v' * num + 'c' * num + 'b'
-    #get all valid permutations
-    combos = getValidPermutations(c)
+    def addWinningPath(self, moves=[]):
+        #recursively generate path list back to starting node
+        moves = [self.v] + moves
+        if self.parent == None: self.winningPaths += [moves]
+        else: self.parent.addWinningPath(moves)
 
-    #generate sets of moves at all stages
-    movesets = [set() for i in c]
-    for combo in combos:
-        i = combo.index('b')
-        movesets[i] |= {getWeight(combo)}
+    def inPath(self, v):
+        #check to see if potential move has already been done (to avoid looping)
+        if self.v == v: return True
+        else:
+            if self.parent == None: return False
+            else: return self.parent.inPath(v)
 
-    #reverse movesets
-    movesets = movesets[::-1]
-    #print all movesets
-    i = 1
-    for moveset in movesets:
-        print('Move ' + str(i) + ': ' + str({weightToStr(w) for w in moveset}))
-        i+=1
+    def genTree(self, movelist, level=0):
+        #recursively generate children given list of permissible moves
+        if self.v.isGoal(): self.addWinningPath()
+        else:
+            for m in movelist:
+                nextv = self.v.move(m)
+                if nextv.isValid(self.total) and not self.inPath(nextv):
+                    nextTree = tree(nextv, [], self.total, self)
+                    nextTree.genTree(movelist, level + 1)
+                    self.children += [nextTree]
+    '''
+    def genTreeOld(self, movelist, level=0):
+        #recursively generate children given list of permissible moves
+        for m in movelist:
+            nextv = self.v.move(m)
+            if nextv.isValid(self.total) and not self.inPath(nextv):
+                #print("\tNext Move: " + str(nextv))
+                self.children += [tree(nextv, [], self.total, self)]
+
+        for child in self.children:
+            if child.v.isGoal(): child.addWinningPath()
+            child.genTree(movelist, level + 1)
+    '''
+
+    def getWinningPaths(self):
+        for path in self.winningPaths:
+            print([v.display(self.total) for v in path])
+
+movelist = [vector(1,0,1), vector(2,0,1), vector(0,1,1), vector(0,2,1), vector(1,1,1)]
+
+def getPaths(numMC):
+    start = vector(numMC,numMC,1)
+    moveTree = tree(start, [], numMC)
+    moveTree.genTree(movelist)
+    print(moveTree)
+    moveTree.getWinningPaths()
+    return moveTree
