@@ -93,9 +93,12 @@ class tree(object):
             child.genTree(movelist, level + 1)
     '''
 
-    def getWinningPaths(self):
+    def displayWinningPaths(self):
+        print("Number of Complete Paths: " + str(len(self.winningPaths)))
         for path in self.winningPaths:
-            print([v.display(self.total) for v in path])
+            print("\nPATH")
+            for v in path:
+                print('\t' + v.display(self.total))
 
 movelist = [vector(1,0,1), vector(2,0,1), vector(0,1,1), vector(0,2,1), vector(1,1,1)]
 
@@ -104,5 +107,5 @@ def getPaths(numMC):
     moveTree = tree(start, [], numMC)
     moveTree.genTree(movelist)
     print(moveTree)
-    moveTree.getWinningPaths()
+    moveTree.displayWinningPaths()
     return moveTree
