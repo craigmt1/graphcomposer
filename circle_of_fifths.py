@@ -64,7 +64,7 @@ major_chords[1][11] = "e"
 major_chords[2][11] = 0
 
 
-melody = [60,62,67,71,72,79] #[60,62,65,64,62] [60,64,65,69,71,72] [60,62,67,55,60] [60,62,67,71,72,79]
+melody = [60,62,67,71,72,79] # [60,64,67,69,74,76,72] [60,62,65,64,62,60,64,65,69,71,72] [60,64,67,64,60] [60,62,67,55,60] [60,62,67,71,72,79]
 
 num_to_note = {0:"C",1:"C#",2:"D",3:"D#",4:"E",5:"F",6:"F#",7:"G",8:"G#",9:"A",10:"A#",11:"B"}
 note_to_num = {"C":0,"C#":1,"D":2,"D#":3,"E":4,"F":5,"F#":6,"G":7,"G#":8,"A":9,"A#":10,"B":11}
@@ -92,6 +92,8 @@ def create_harmony(melody):
         time = time + 3
         MyMIDI.addNote(track,channel,pitch,time,duration,volume)
 
+    time = time + 3
+
     for note in notes: #now add harmonies
         track = 0
         channel = 0
@@ -106,25 +108,24 @@ def create_harmony(melody):
             chords.append(major_chords[x][pitch%12])
 
         MyMIDI.addNote(track,channel,pitch,time,duration,volume)
-        if counter == 0: #first chord is always root chord
+        if counter == 0: # first chord is always root chord
             MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
             MyMIDI.addNote(track,channel,pitch-8,time,duration,volume)
             MyMIDI.addNote(track,channel,pitch-5,time,duration,volume)
         else: 
-            path1 = nx.shortest_path(G, source=nextChord, target=chords[0]) #find shortest path to next possible chords and pick the one with shortest distance
+            path1 = nx.shortest_path(G, source=nextChord, target=chords[0]) # find shortest path to next possible chords and pick the one with shortest distance
             path2 = nx.shortest_path(G, source=nextChord, target=chords[1]) # could use shortest_path_length instead
             path3 = [0]*20
             if major_chords[2][notes[counter]%12] != 0: path3 = nx.shortest_path(G, source=nextChord, target=chords[2])
             chords_list = [(path1, len(path1)), (path2, len(path2)), (path3, len(path3))]
             chords_list.sort(key=lambda tup: tup[1])
-            print(chords_list)
             l, length = chords_list[0]
             if length != 1:
                 nextChord = l[length - 1]
             else:
                 l, length = chords_list[1]
                 nextChord = l[length - 1]
-            if nextChord.isupper():
+            if nextChord.isupper(): # is it's uppercase, then it's a major chord
                 if note_letter == nextChord: # root inversion
                     MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
                     MyMIDI.addNote(track,channel,pitch-8,time,duration,volume)
@@ -137,8 +138,7 @@ def create_harmony(melody):
                     MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
                     MyMIDI.addNote(track,channel,pitch-4,time,duration,volume)
                     MyMIDI.addNote(track,channel,pitch-9,time,duration,volume)
-            else:
-
+            else: # if it's lowercase, then it's a minor chord
                 if note_letter == nextChord.upper(): # root inversion
                     MyMIDI.addNote(track,channel,pitch-12,time,duration,volume)
                     MyMIDI.addNote(track,channel,pitch-9,time,duration,volume)
@@ -160,11 +160,5 @@ def create_harmony(melody):
     MyMIDI.writeFile(binfile)
     binfile.close()
 
-
 create_harmony(melody)
-
-
-
-            
-
 
