@@ -1,83 +1,78 @@
-import networkx as nx 
+#import networkx as nx 
 import itertools as it
+from operator import sub
 
+def getWeight(s):
+    #find distribution of cannibals and missionaries
+    b_ind = s.index('b')
+    s1, s2, = s[:b_ind], s[b_ind:]
+    return (s1.count('v'), s1.count('c'), s2.count('v'), s2.count('c'))
 
-#create all the possible combinations
-num_veg = 2
-num_can = 2
+def isValid(s):
+    (v1, c1, v2, c2) = getWeight(s)
+    if v1 and c1 > v1: return False
+    if v2 and c2 > v2: return False
+    return True
 
-if num_can > num_veg:
-    print "There are more cannibals than vegetarians!"
-    quit()
+def getValidPermutations(start):
+    #generate list of permutations that pass validity check
+    return [''.join(subset) for subset in it.permutations(start,len(start)) if isValid(''.join(subset))]
+
+#checks if s2 is possible next move for s1
+def isNext(s1, s2):
+    mask = tuple(map(sub, s1, s2))
+    validMasks = [(1,0,-1,0), (0,1,0,-1)]
+    if mask in validMasks: return True
+    else: return False
+
+def isValidPath(path):
+    for i in range(len(path) - 1):
+        if not isNext(path[i], path[i + 1]):
+            return False
+    return True
+
+def weightToStr(w):
+    (v1, c1, v2, c2) = w
+    return 'v' * v1 + 'c' * c1 + 'b' + 'v' * v2 + 'c' * c2
+
+def main(num, verbose = False):
+    c = 'v' * num + 'c' * num + 'b'
+    #get all valid permutations
+    combos = getValidPermutations(c)
+
+    #generate sets of moves at all stages
+    movesets = [set() for i in c]
+    for combo in combos:
+        i = combo.index('b')
+        movesets[i] |= {getWeight(combo)}
+
+    #reverse movesets
+    movesets = movesets[::-1]
     
-c = ['v']*num_veg
-c += ['c']*num_can
-c += ['b']
+    if verbose:
+        #print all movesets
+        print("Sets of possible moves at each stage.")
+        i = 1
+        for moveset in movesets:
+            print('Move ' + str(i) + ': ' + str({w for w in moveset}))
+            i+=1
 
-combos = []
-for subset in it.permutations(c,len(c)):
-    combos.append(list(subset))
+    #generate all combinations of paths with movesets
+    paths = list(it.product(*movesets))
+    if verbose:
+        #print them
+        print("\nAll path combinations")
+        for path in paths:
+            print('Path: ' + str([step for step in path]))
 
+    #check if paths are valid (every subsequent move for each path is possible)
+    paths = [path for path in paths if isValidPath(path)]
 
-set_combos = []
-for item in combos:
-    if item not in set_combos:
-        set_combos.append(item)
+    if verbose:
+        #print remaining
+        print("\nVALID:")
+        for path in paths:
+            print('Path: ' + str([step for step in path]))
 
-
-veg_before = 0
-can_before = 0
-veg_after = 0
-can_after = 0
-valid = [] 
-
-
-#retrieve a subset of the combinations that are valid. Valid if there aren't more cannibals than vegans before or after the boat, b.
-
-
-#check island on the other side 
-def check_other(combo_after):
-    global veg_after
-    global can_after
-    for c in combo_after:
-        if c == 'v':
-            veg_after += 1
-        if c == 'c':
-            can_after += 1
-    cont = False
-    if veg_after >= can_after or veg_after == 0:
-        cont = True
-    veg_after = 0
-    can_after = 0
-    return cont 
-    
-def check_list_validity(combo):
-    global veg_before
-    global can_before
-    for c in combo:
-        if c == 'v':
-            veg_before += 1
-        if c == 'c':
-            can_before += 1
-        if c == 'b':
-            if veg_before >= can_before or veg_before == 0: #check other side if this one is valid
-                cont = check_other(combo[combo.index(c):])
-            else:
-                cont = False
-            veg_before = 0
-            can_before = 0
-            if cont:
-                valid.append(combo)
-            break 
- 
-for combo in set_combos:
-    check_list_validity(combo)
-
-
-
-nodes = []
-
-for v in valid:
-    nodes.append("".join(v))
-
-print nodes
+    return paths
+                
