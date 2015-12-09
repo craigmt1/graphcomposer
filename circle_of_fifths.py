@@ -114,7 +114,7 @@ def create_harmony(melody):
             MyMIDI.addNote(track,channel,pitch-5,time,duration,volume)
         else: 
             path1 = nx.shortest_path(G, source=nextChord, target=chords[0]) # find shortest path to next possible chords and pick the one with shortest distance
-            path2 = nx.shortest_path(G, source=nextChord, target=chords[1]) # could use shortest_path_length instead
+            path2 = nx.shortest_path(G, source=nextChord, target=chords[1]) 
             path3 = [0]*20
             if major_chords[2][notes[counter]%12] != 0: path3 = nx.shortest_path(G, source=nextChord, target=chords[2])
             chords_list = [(path1, len(path1)), (path2, len(path2)), (path3, len(path3))]
